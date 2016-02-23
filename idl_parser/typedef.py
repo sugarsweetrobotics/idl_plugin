@@ -1,5 +1,5 @@
 import node
-
+import type as idl_type
 sep = '::'
 
 class IDLTypedef(node.IDLNode):
@@ -13,16 +13,27 @@ class IDLTypedef(node.IDLNode):
     def full_path(self):
         return self.parent.full_path + sep + self.name
 
-    def to_simple_dic(self, quiet):
+    def to_simple_dic(self, quiet=False, full_path=False, recursive=False, member_only=False):
+        name = self.full_path if full_path else self.name
         if quiet:
-            return 'typedef ' + self._name
-        dic = 'typedef ' + self._type + ' ' + self._name
+            return 'typedef ' + name
+
+        if recursive:
+            list_ = []
+            list_.append({'typedef' : str(self.type)})
+            if not self.type.is_primitive:
+                list_.append(self.type.obj.to_simple_dic(recursive=recursive, member_only=True))
+            if member_only:
+                return list_
+            return {name : list_}
+
+        dic = 'typedef %s %s' % (self.type, name)
         return dic
 
     def to_dic(self):
         dic = { 'name' : self.name,
                 'classname' : self.classname,
-                'type' : self.type }
+                'type' : str(self.type) }
         return dic
 
     @property
@@ -53,10 +64,11 @@ class IDLTypedef(node.IDLNode):
         type_name = type_name + ' ' + type_name_
         type_name = type_name.strip()
 
-        self._type = type_name
+        self._type = idl_type.IDLType(type_name, self)
         self._name = name
 
         self._post_process()
 
     def _post_process(self):
-        self._type = self.refine_typename(self.type)
+        #self._type = self.refine_typename(self.type)
+        pass

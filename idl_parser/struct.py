@@ -1,7 +1,7 @@
 import os, sys, traceback
 
 import node
-
+import type as idl_type
 sep = '::'
 
 class IDLValue(node.IDLNode):
@@ -15,18 +15,24 @@ class IDLValue(node.IDLNode):
         return self.parent.full_path + '::' + self.name
 
     def parse_blocks(self, blocks):
-        name, type = self._name_and_type(blocks)
+        name, typ = self._name_and_type(blocks)
         self._name = name
-        self._type = type
+        self._type = idl_type.IDLType(typ, self)
 
-    def to_simple_dic(self):
-        dic = {self.name : self.type }
+    def to_simple_dic(self, recursive=False):
+        if recursive:
+            if self.type.is_primitive:
+                return str(self.type) + ' ' + self.name
+            dic = {str(self.type) +' ' + self.name : 
+                   self.type.obj.to_simple_dic(recursive=recursive, member_only=True)}
+            return dic
+        dic = {self.name : str(self.type) }
         return dic
 
     def to_dic(self):
         dic = { 'name' : self.name,
                 'classname' : self.classname,
-                'type' : self.type }
+                'type' : str(self.type) }
         return dic
 
     @property
@@ -34,7 +40,8 @@ class IDLValue(node.IDLNode):
         return self._type
 
     def post_process(self):
-        self._type = self.refine_typename(self.type)
+        #self._type = self.refine_typename(self.type)
+        pass
                 
 
 class IDLStruct(node.IDLNode):
@@ -46,12 +53,17 @@ class IDLStruct(node.IDLNode):
 
     @property
     def full_path(self):
-        return self.parent.full_path + sep + self.name
+        return (self.parent.full_path + sep + self.name).strip()
 
-    def to_simple_dic(self, quiet=False):
+    def to_simple_dic(self, quiet=False, full_path=False, recursive=False, member_only=False):
+        name = self.full_path if full_path else self.name
         if quiet:
-            return 'struct %s' % self.name 
-        dic = { 'struct %s' % self.name : [v.to_simple_dic() for v in self.members] }
+            return 'struct %s' % name 
+        
+        dic = { 'struct %s' % name : [v.to_simple_dic(recursive=recursive) for v in self.members] }
+
+        if member_only:
+            return dic.values()[0]
         return dic
                     
 

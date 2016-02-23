@@ -199,14 +199,17 @@ class IDLModule(node.IDLNode):
 
     def find_types(self, full_typename):
         typenode = []
-        def parse_node(s, name=full_typename):
-            if s.name == full_typename or s.full_path == full_typename:
+
+        def parse_node(s, name=str(full_typename)):
+            if s.name == name.strip() or s.full_path == name.strip():
                 typenode.append(s)
 
         def parse_module(m):
             m.forEachModule(parse_module)
             m.forEachStruct(parse_node)
             m.forEachTypedef(parse_node)
+            m.forEachEnum(parse_node)
+            m.forEachInterface(parse_node)
 
         parse_module(self)
 

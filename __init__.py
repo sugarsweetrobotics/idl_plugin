@@ -75,12 +75,13 @@ class Plugin(PluginFunction):
         """ This is help text
         """
         self.parser.add_option('-l', '--long', help='Long option (default=False)', default=False, action='store_true', dest='long_flag')
+        self.parser.add_option('-r', '--recursive', help='Recursive Type Parse (default=False)', default=False, action='store_true', dest='recursive_flag')
         options, argv = self.parse_args(argv[:], self._print_alternatives)
         verbose = options.verbose_flag # This is default option
         long = options.long_flag
+        recursive = options.recursive_flag
 
         wasanbon.arg_check(argv, 4)
-
 
         self._parse()
 
@@ -92,7 +93,7 @@ class Plugin(PluginFunction):
 
         for t in typs:
             import yaml
-            print yaml.dump(t.to_simple_dic(), default_flow_style=False)
+            print yaml.dump(t.to_simple_dic(full_path=True, recursive=recursive), default_flow_style=False)
 
         return 0
         

@@ -48,6 +48,7 @@ class IDLNode(object):
             typ__ = self.refine_typename(typ_)
             return 'sequence < ' + typ__ + ' >'
         else:
+        #f True:
             typs = global_module.find_types(typ)
             if len(typs) == 0:
                 return typ

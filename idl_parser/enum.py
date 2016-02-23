@@ -1,6 +1,7 @@
 import os, sys, traceback
 
 import node
+sep = '::'
 
 class IDLEnumValue(node.IDLNode):
     def __init__(self, value, parent):
@@ -16,6 +17,10 @@ class IDLEnumValue(node.IDLNode):
         #name, type = self._name_and_type(blocks)
         #self._name = name
         #self._type = type
+
+    @property
+    def full_path(self):
+        return self.full_path + '.' + self.name
 
     def to_simple_dic(self):
         dic = {self.name : self.value }
@@ -40,10 +45,11 @@ class IDLEnum(node.IDLNode):
         self._verbose = True
         self._members = []
 
-    def to_simple_dic(self, quiet=False):
+    def to_simple_dic(self, quiet=False, full_path=False, recursive=False):
+        name = self.full_path if full_path else self.name
         if quiet:
-            return 'enum %s' % self.name 
-        dic = { 'enum %s' % self.name : [v.to_simple_dic() for v in self.members] }
+            return 'enum %s' % name 
+        dic = { 'enum %s' % name : [v.to_simple_dic() for v in self.members] }
         return dic
                     
 
@@ -52,6 +58,10 @@ class IDLEnum(node.IDLNode):
                 'classname' : self.classname,
                 'members' : [v.to_dic() for v in self.members] }
         return dic
+
+    @property
+    def full_path(self):
+        return self.parent.full_path + sep + self.name
     
     def parse_tokens(self, token_buf):
         self._counter = 0

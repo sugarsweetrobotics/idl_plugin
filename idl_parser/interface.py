@@ -1,5 +1,8 @@
 import node
 
+import type as idl_type
+
+sep = '::'
 
 class IDLArgument(node.IDLNode):
     def __init__(self, parent):
@@ -17,7 +20,7 @@ class IDLArgument(node.IDLNode):
             pass
         argument_name, argument_type = self._name_and_type(blocks)
         self._name = argument_name
-        self._type = argument_type
+        self._type = idl_type.IDLType(argument_type, self)
 
     def to_simple_dic(self):
         dic = '%s %s %s' % (self.direction, self.type, self.name)
@@ -26,7 +29,7 @@ class IDLArgument(node.IDLNode):
     def to_dic(self):
         dic = { 'name' : self.name,
                 'classname' : self.classname,
-                'type' : self.type,
+                'type' : str(self.type),
                 'direction' : self.direction }
         return dic
 
@@ -39,7 +42,8 @@ class IDLArgument(node.IDLNode):
         return self._type
 
     def post_process(self):
-        self._type = self.refine_typename(self.type)
+        #self._type = self.refine_typename(self.type)
+        pass
 
         
 class IDLMethod(node.IDLNode):
@@ -57,7 +61,7 @@ class IDLMethod(node.IDLNode):
         else:
             self._oneway = False
 
-        self._returns = blocks[0]
+        self._returns = idl_type.IDLType(blocks[0], self)
         self._name = blocks[1]
         self._arguments = []
 
@@ -86,13 +90,13 @@ class IDLMethod(node.IDLNode):
 
     def to_simple_dic(self):
         return {self.name : {
-                'returns' : self.returns,
+                'returns' : str(self.returns),
                 'params' : [a.to_simple_dic() for a in self.arguments]}}
 
     def to_dic(self):
         dic = { 'name' : self.name,
                 'classname' : self.classname,
-                'returns' : self._returns,
+                'returns' : str(self._returns),
                 'arguments' : [a.to_dic() for a in self.arguments]}
         return dic
 
@@ -109,8 +113,9 @@ class IDLMethod(node.IDLNode):
             func(a)
 
     def post_process(self):
-        self._returns = self.refine_typename(self.returns)
-        self.forEachArgument(lambda a : a.post_process())
+        #self._returns = self.refine_typename(self.returns)
+        #self.forEachArgument(lambda a : a.post_process())
+        pass
 
 class IDLInterface(node.IDLNode):
     
@@ -118,8 +123,12 @@ class IDLInterface(node.IDLNode):
         super(IDLInterface, self).__init__('IDLInterface', name, parent)
         self._verbose = True
         self._methods = []
+        
+    @property
+    def full_path(self):
+        return self.parent.full_path + sep + self.name
 
-    def to_simple_dic(self, quiet=False):
+    def to_simple_dic(self, quiet=False, full_path=False, recursive=False):
         if quiet:
             return 'interface %s' % self.name
         dic = { 'interface ' + self.name : [m.to_simple_dic() for m in self.methods] }
