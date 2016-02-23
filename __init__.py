@@ -426,14 +426,50 @@ class Plugin(PluginFunction):
             output_lines.append(output_line)
 
         return output_lines
+
+    def simplify(self, model):
+        dic = {}
+        if 'class' in model.keys():
+            if model['class'] == 'struct':
+                name = model['module'] + '::' + model['name']
+                dic[name] = []
+                for member_name, member_info in model['member'].items():
+                    typed_member_name = member_info['typename'] + ' ' + member_name
+                    if not 'typeinfo' in member_info.keys():
+                        dic[name]
+                    member_dic = {typed_member_name : []}
+
+                    
+                    if 'typeinfo' in member_info.keys():
+                        if not 'member' in  member_info['typeinfo'].keys():
+                            pass
+                        else:
+                            for memname, meminfo in member_info['typeinfo']['member'].items():
+                                typed_memname = meminfo['typename'] + ' ' + memname
+                                if not 'typeinfo' in  meminfo.keys():
+                                    mem_dic = typed_memname
+                                else:
+                                    print meminfo
+                                    meminfo_dic = self.simplify(meminfo['typeinfo'])
+                                    mem_dic = {typed_memname : meminfo_dic[meminfo_dic.keys()[0]]}
+                                    pass
+                                member_dic[typed_member_name].append(mem_dic) 
+                    else:
+                        member_dic = typed_member_name
+                    dic[name].append(member_dic)
+        else:
+            if 'typename' in model.keys():
+                return model['typename']
+        return dic
+
     @manifest
     def show(self, argv):
         """ This is help text
         """
-        #self.parser.add_option('-f', '--force', help='Force option (default=False)', default=False, action='store_true', dest='force_flag')
+        self.parser.add_option('-l', '--long', help='Long option (default=False)', default=False, action='store_true', dest='long_flag')
         options, argv = self.parse_args(argv[:], self._print_alternatives)
         verbose = options.verbose_flag # This is default option
-        #force   = options.force_flag
+        long = options.long_flag
 
         wasanbon.arg_check(argv, 4)
 
@@ -445,6 +481,10 @@ class Plugin(PluginFunction):
 
         full_typename = argv[3]
         dic = self.find(full_typename)
+        
+        if not long:
+            dic = self.simplify(dic)
+
         import yaml
         print yaml.dump(dic, default_flow_style=False)
         return 0
