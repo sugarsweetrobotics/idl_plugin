@@ -21,29 +21,28 @@ class Plugin(PluginFunction):
         print 'yah'
 
 
-    def forEachIDL(self, func):
-        idl_dirs = [os.path.join(wasanbon.get_rtm_root(), 'rtm', 'idl'),
-                    os.path.join(wasanbon.home_path, 'idl')]
+    def forEachIDL(self, func, idls=[], idl_dirs=[], except_files=[]):
+        """ Apply func function to each IDLs.
+        """
+        default_idl_dirs = [os.path.join(wasanbon.get_rtm_root(), 'rtm', 'idl'),
+                            os.path.join(wasanbon.home_path, 'idl')]
 
-        self._parser = parser.IDLParser(idl_dirs)
-        except_files = ['RTM.idl', 'RTC.idl', 'OpenRTM.idl', 'DataPort.idl', 'Manager.idl', 'SDOPackage.idl']
-        self.forEachIDL(func, except_files=except_files)
+        default_except_files = ['RTM.idl', 'RTC.idl', 'OpenRTM.idl', 'DataPort.idl', 'Manager.idl', 'SDOPackage.idl']
 
-    def _parse(self):
-        idl_dirs = [os.path.join(wasanbon.get_rtm_root(), 'rtm', 'idl'),
-                    os.path.join(wasanbon.home_path, 'idl')]
+        if self._parser is None:
+            self._parser = parser.IDLParser()
 
-        self._parser = parser.IDLParser(idl_dirs)
-        except_files = ['RTM.idl', 'RTC.idl', 'OpenRTM.idl', 'DataPort.idl', 'Manager.idl', 'SDOPackage.idl']
-        self._parser.parse(except_files=except_files)
+        except_files = except_files + default_except_files
+        self._parser.forEachIDL(func, idl_dirs=idl_dirs + default_idl_dirs, except_files=except_files)
 
+    def parse(self, idls=[], idl_dirs=[], except_files=[]):
+        self._parser = parser.IDLParser()
+        self.forEachIDL(self._parser.parse_idl, idls=idls, idl_dirs=idl_dirs, except_files=except_files)
 
     @manifest
     def list(self, argv):
-        """ This is help text
+        """ List IDL files in default directories (RTM_ROOT and ~/.wasanbon/idl)
         """
-
-        #self.parser.add_option('-f', '--force', help='Force option (default=False)', default=False, action='store_true', dest='force_flag')
         options, argv = self.parse_args(argv[:], self._print_alternatives)
         verbose = options.verbose_flag # This is default option
 
@@ -52,17 +51,19 @@ class Plugin(PluginFunction):
 
 
     @manifest
-    def parse(self, argv):
-        """ This is help text
+    def to_dic(self, argv):
+        """ Convert IDL contents to Dictionary.
+        $ wasanbon-admin.py idl to_dic
         """
-        self.parser.add_option('-d', '--detail', help='Detail information option (default=False)', default=False, action='store_true', dest='detail_flag')
         self.parser.add_option('-l', '--long', help='Long format option (default=False)', default=False, action='store_true', dest='long_flag')
+        self.parser.add_option('-d', '--detail', help='Detail information option. This shows the converted dictionary completely. A bit difficult to read. (default=False)', default=False, action='store_true', dest='detail_flag')
+
         options, argv = self.parse_args(argv[:], self._print_alternatives)
         verbose = options.verbose_flag # This is default option
         long = options.long_flag
         detail = options.detail_flag
 
-        self._parse()
+        self.parse()
 
         import yaml
         if detail:
@@ -72,10 +73,10 @@ class Plugin(PluginFunction):
 
     @manifest
     def show(self, argv):
-        """ This is help text
+        """ Show datatype (struct, enum, typedef, and interface) information.
         """
-        self.parser.add_option('-l', '--long', help='Long option (default=False)', default=False, action='store_true', dest='long_flag')
-        self.parser.add_option('-r', '--recursive', help='Recursive Type Parse (default=False)', default=False, action='store_true', dest='recursive_flag')
+        self.parser.add_option('-l', '--long', help='Long format option (default=False)', default=False, action='store_true', dest='long_flag')
+        self.parser.add_option('-r', '--recursive', help='Recursive Type Parse. Show each members in inner structs. (default=False)', default=False, action='store_true', dest='recursive_flag')
         options, argv = self.parse_args(argv[:], self._print_alternatives)
         verbose = options.verbose_flag # This is default option
         long = options.long_flag
@@ -83,7 +84,7 @@ class Plugin(PluginFunction):
 
         wasanbon.arg_check(argv, 4)
 
-        self._parse()
+        self.parse()
 
         full_typename = argv[3]
         typs = self._parser.global_module.find_types(full_typename)

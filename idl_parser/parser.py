@@ -9,17 +9,22 @@ class IDLParser():
     def __init__(self, idl_dirs=[]):
         self._global_module = module.IDLModule()
         self._dirs = idl_dirs
-
+        self._verbose = False
     @property
     def global_module(self):
         return self._global_module
 
-    def parse(self, idl_dirs=[], except_files=[]):
-        self._dirs = self._dirs + idl_dirs
-        self.forEachIDL(self.parse_idl, except_files=except_files)
+    def parse(self, idls=[], idl_dirs=[], except_files=[]):
+        """ Parse IDL files. Result of parsing can be accessed via global_module property.
+        :param idls: List of IDL files. Must be fullpath.
+        :param idl_dirs: List of directory which contains target IDL files. Must be fullpath.
+        :param except_files: List of IDL files that should be ignored. Do not have to use fullpath.
+        :returns: None
+        """
+        self.forEachIDL(self.parse_idl, except_files=except_files, idls=idls)
 
     def parse_idl(self, idl_path):
-
+        if self._verbose: sys.stdout.write(' - Parsing IDL (%s)\n' % idl_path)
         f = open(idl_path, 'r')
         lines = []
         for line in f:
@@ -34,8 +39,16 @@ class IDLParser():
         self._global_module.parse_tokens(self._token_buf)
 
 
-    def forEachIDL(self, func, idl_dirs=[], except_files=[]):
+    def forEachIDL(self, func, idl_dirs=[], except_files=[], idls=[]):
+        """ Parse IDLs and apply function.
+        :param func: Function. IDL file fullpath will be passed to the function.
+        :param idls: List of IDL files. Must be fullpath.
+        :param idl_dirs: List of directory which contains target IDL files. Must be fullpath.
+        :param except_files: List of IDL files that should be ignored. Do not have to use fullpath.
+        :returns: None
+        """
         idl_dirs = self._dirs + idl_dirs
+        self._dirs = idl_dirs
         idls_ = []
         basenames_ = []
         for idl_dir in idl_dirs:
@@ -47,15 +60,17 @@ class IDLParser():
                             idls_.append(path)
                             basenames_.append(os.path.basename(path))
 
+        idls_ = idls_ + idls
         for f in idls_:
+            if self._verbose: sys.stdout.write(' - Apply function to %s\n' % f)
             func(f)
 
-
     def _find_idl(self, filename, apply_func, idl_dirs=[]):
+        if self._verbose: sys.stdout.write(' --- Find %s\n' % filename)
+        
         global retval
         retval = None
         def func(filepath):
-
             if os.path.basename(filepath) == filename:
                 global retval
                 retval = apply_func(filepath)
@@ -65,7 +80,6 @@ class IDLParser():
 
     def _paste_include(self, lines):
         output_lines = []
-
         for line in lines:
             output_line = ''
             if line.startswith('#include'):
@@ -74,9 +88,12 @@ class IDLParser():
 
                 if line.find('"') >= 7:
                     filename = line[line.find('"')+1 : line.rfind('"')]
+                    if self._verbose: sys.stdout.write(' -- Includes %s\n' % filename)
                     p = self._find_idl(filename, _include_paste)
+                    if p is None:
+                        sys.stdout.write(' # IDL (%s) can not be found.\n' % filename)
+                        raise IDLFileNotFoundErrorx
                     inc_lines = []
-
                     f = open(p, 'r')
                     for l in f:
                         inc_lines.append(l)
@@ -86,9 +103,12 @@ class IDLParser():
 
                 elif line.find('<') >= 7:
                     filename = line[line.find('<')+1 : line.rfind('>')]
+                    if self._verbose: sys.stdout.write(' -- Includes %s\n' % filename)
                     p = self._find_idl(filename, _include_paste)
+                    if p is None:
+                        sys.stdout.write(' # IDL (%s) can not be found.\n' % filename)
+                        raise IDLFileNotFoundErrorx
                     inc_lines = []
-
                     f = open(p, 'r')
                     for l in f:
                         inc_lines.append(l)
