@@ -2,27 +2,37 @@ import os, sys, traceback
 
 import node
 import type as idl_type
-sep = '::'
+
 
 class IDLValue(node.IDLNode):
     def __init__(self, parent):
         super(IDLValue, self).__init__('IDLValue', '', parent)
         self._verbose = True
         self._type = None
+        self.sep = '::'
     
     @property
     def full_path(self):
-        return self.parent.full_path + '::' + self.name
+        return self.parent.full_path + self.sep + self.name
 
     def parse_blocks(self, blocks):
         name, typ = self._name_and_type(blocks)
+        if typ.find('[') >= 0:
+            print self.name, ':',typ
+        if name.find('[') > 0:
+            name_ = name[:name.find('[')]
+            print typ
+            typ = typ.strip() + ' ' + name[name.find('['):]
+            name = name_
         self._name = name
         self._type = idl_type.IDLType(typ, self)
 
-    def to_simple_dic(self, recursive=False):
+    def to_simple_dic(self, recursive=False, member_only=False):
         if recursive:
             if self.type.is_primitive:
                 return str(self.type) + ' ' + self.name
+            elif self.type.obj.is_enum:
+                return str('enum') + ' ' + self.name
             dic = {str(self.type) +' ' + self.name : 
                    self.type.obj.to_simple_dic(recursive=recursive, member_only=True)}
             return dic
@@ -50,10 +60,11 @@ class IDLStruct(node.IDLNode):
         super(IDLStruct, self).__init__('IDLStruct', name.strip(), parent)
         self._verbose = True
         self._members = []
-
+        self.sep = '::'
+        
     @property
     def full_path(self):
-        return (self.parent.full_path + sep + self.name).strip()
+        return (self.parent.full_path + self.sep + self.name).strip()
 
     def to_simple_dic(self, quiet=False, full_path=False, recursive=False, member_only=False):
         name = self.full_path if full_path else self.name

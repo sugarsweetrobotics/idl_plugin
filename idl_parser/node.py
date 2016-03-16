@@ -7,12 +7,49 @@ class IDLNode(object):
         self._name = name
 
     @property
+    def is_array(self):
+        return self._classname == 'IDLArray'
+
+    @property
+    def is_struct(self):
+        return self._classname == 'IDLStruct'
+
+    @property
+    def is_typedef(self):
+        return self._classname == 'IDLTypedef'
+
+    @property
+    def is_sequence(self):
+        return self._classname == 'IDLSequence'
+
+    @property
+    def is_primitive(self):
+        return self._classname == 'IDLPrimitive'
+
+    @property
+    def is_enum(self):
+        return self._classname == 'IDLEnum'
+
+    @property
     def classname(self):
         return self._classname
 
     @property
     def name(self):
         return self._name
+
+    @property
+    def basename(self):
+        if self.name.find('::') > 0:
+            return self.name[self.name.rfind('::')+2:]
+        return self.name
+
+    @property
+    def pathname(self):
+        if self.name.find('::') > 0:
+            return self.name[:self.name.rfind('::')]
+        return ''
+
 
     @property
     def parent(self):

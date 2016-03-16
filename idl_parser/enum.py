@@ -45,7 +45,7 @@ class IDLEnum(node.IDLNode):
         self._verbose = True
         self._members = []
 
-    def to_simple_dic(self, quiet=False, full_path=False, recursive=False):
+    def to_simple_dic(self, quiet=False, full_path=False, recursive=False, member_only=False):
         name = self.full_path if full_path else self.name
         if quiet:
             return 'enum %s' % name 

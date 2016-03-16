@@ -128,7 +128,7 @@ class IDLInterface(node.IDLNode):
     def full_path(self):
         return self.parent.full_path + sep + self.name
 
-    def to_simple_dic(self, quiet=False, full_path=False, recursive=False):
+    def to_simple_dic(self, quiet=False, full_path=False, recursive=False, member_only=False):
         if quiet:
             return 'interface %s' % self.name
         dic = { 'interface ' + self.name : [m.to_simple_dic() for m in self.methods] }

@@ -1,6 +1,7 @@
 import os, sys
 
 import module, token_buffer
+import type as idl_type
 
 
 
@@ -13,6 +14,9 @@ class IDLParser():
     @property
     def global_module(self):
         return self._global_module
+
+    def is_primitive(self, name):
+        return idl_type.is_primitive(name)
 
     def parse(self, idls=[], idl_dirs=[], except_files=[]):
         """ Parse IDL files. Result of parsing can be accessed via global_module property.
@@ -201,3 +205,21 @@ class IDLParser():
         _parse(True)
         return output_lines
 
+
+    def generate_constructor_python(self, typ):
+        code = ''
+        if typ.is_sequence:
+            code = code + '[]'
+        elif typ.is_primitive:
+            code = code + '0'
+        elif typ.is_typedef:
+            code = code + self.generate_constructor_python(typ.type)
+        elif typ.is_struct:
+            code = code + typ.full_path + '('
+            for m in typ.members:
+                if m.type.is_primitive:
+                    code = code + self.generate_constructor_python(m.type) + ', '
+                else:
+                    code = code + self.generate_constructor_python(m.type.obj) + ', '
+            code = code[:-2] + ')'
+        return code.replace('::', '.')

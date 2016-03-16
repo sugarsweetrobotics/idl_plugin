@@ -14,6 +14,11 @@ primitive = [
     'string',
     'wstring']
            
+def is_primitive(name):
+    for n in name.split(' '):
+        if n in primitive:
+            return True
+    return False
 
 def IDLType(name, parent):
     if name == 'void':
@@ -21,10 +26,11 @@ def IDLType(name, parent):
 
     elif name.find('sequence') >= 0:
         return IDLSequence(name, parent)
+    elif name.find('[') >= 0:
+        return IDLArray(name, parent)
 
-    for n in name.split(' '):
-        if n in primitive:
-            return IDLPrimitive(name, parent)
+    if is_primitive(name):
+        return IDLPrimitive(name, parent)
 
     return IDLBasicType(name, parent)
 
@@ -59,7 +65,9 @@ class IDLSequence(IDLTypeBase):
             raise InvalidIDLSyntaxError()
         typ_ = name[name.find('<')+1 : name.find('>')]
         self._type = IDLType(typ_, parent)        
-        self._is_primitive = self.inner_type.is_primitive
+        self._is_primitive = False #self.inner_type.is_primitive
+        self._is_sequence = True
+
     @property
     def inner_type(self):
         return self._type
@@ -69,6 +77,10 @@ class IDLSequence(IDLTypeBase):
     
     @property
     def obj(self):
+        return self
+
+
+    def __hoge(self):
         global_module = self.root_node
         typs = global_module.find_types(self.inner_type)
         print self.inner_type
@@ -78,6 +90,139 @@ class IDLSequence(IDLTypeBase):
         else:
             print typs[0]
             return typs[0]
+
+    @property
+    def type(self):
+        return self._type
+
+    @property
+    def full_path(self):
+        return self.parent.full_path + sep + self.name
+
+    def to_simple_dic(self, quiet=False, full_path=False, recursive=False, member_only=False):
+        name = self.full_path if full_path else self.name
+        if quiet:
+            return 'sequence<%s>' % str(self.inner_type)
+
+        if recursive:
+            if self.type.is_primitive:
+                return { 'sequence<%s>' % str(self.type) : str(self.type)}
+            else:
+                return { 'sequence<%s>' % str(self.type) : self.type.obj.to_simple_dic(recursive=recursive, member_only=True)}
+        """
+            n = 'typedef ' + str(self.type) +' ' + name
+            if not self.type.is_primitive:
+                dic = { n : (self.type.obj.to_simple_dic(recursive=recursive, member_only=True))}
+            else:
+                dic = { n : str(self.type) }
+            if member_only:
+                return dic
+            return {name : dic}
+
+        dic = 'typedef %s %s' % (self.type, name)
+        return dic
+        """
+
+    def to_dic(self):
+        dic = { 'name' : self.name,
+                'classname' : self.classname,
+                'type' : str(self.type) }
+        return dic
+
+class IDLArray(IDLTypeBase):
+    def __init__(self, name, parent):
+        super(IDLArray, self).__init__('IDLArray', name, parent.root_node)
+
+        self._verbose = True
+        if name.find('[') < 0:
+            raise InvalidIDLSyntaxError()
+        primitive_type_name = name[:name.find('[')]
+        size = name[name.find('[')+1 : name.find(']')]
+        inner_type_name = primitive_type_name + name[name.find(']')+1:]
+        self._size = int(size)
+        self._type = IDLType(inner_type_name, parent)
+        self._is_primitive = False #self.inner_type.is_primitive
+        self._is_sequence = False
+        self._is_array = True
+
+
+    @property
+    def inner_type(self):
+        return self._type
+
+    @property
+    def primitive_type(self):
+        if self.inner_type.is_array:
+            return self.inner_type.primitive_type
+        else:
+            return self.inner_type
+
+    def __str__(self):
+        n = ['%s' % self.primitive_type.name]
+        def _apply_size(typ):
+            n[0] = n[0] + '[%s]' % self.size
+            if typ.inner_type.is_array:
+                _apply_size(typ.inner_type)
+        
+        _apply_size(self)
+        return n[0]
+    
+    @property
+    def obj(self):
+        return self
+    
+    @property
+    def size(self):
+        return self._size
+
+    def __hoge(self):
+        global_module = self.root_node
+        typs = global_module.find_types(self.inner_type)
+        print self.inner_type
+        if len(typs) == 0:
+            print 'None'
+            return None
+        else:
+            print typs[0]
+            return typs[0]
+
+    @property
+    def type(self):
+        return self._type
+
+    @property
+    def full_path(self):
+        return self.parent.full_path + sep + self.name
+
+    def to_simple_dic(self, quiet=False, full_path=False, recursive=False, member_only=False):
+        name = self.full_path if full_path else self.name
+        if quiet:
+            return 'sequence<%s>' % str(self.inner_type)
+
+        if recursive:
+            if self.type.is_primitive:
+                return { 'sequence<%s>' % str(self.type) : str(self.type)}
+            else:
+                return { 'sequence<%s>' % str(self.type) : self.type.obj.to_simple_dic(recursive=recursive, member_only=True)}
+        """
+            n = 'typedef ' + str(self.type) +' ' + name
+            if not self.type.is_primitive:
+                dic = { n : (self.type.obj.to_simple_dic(recursive=recursive, member_only=True))}
+            else:
+                dic = { n : str(self.type) }
+            if member_only:
+                return dic
+            return {name : dic}
+
+        dic = 'typedef %s %s' % (self.type, name)
+        return dic
+        """
+
+    def to_dic(self):
+        dic = { 'name' : self.name,
+                'classname' : self.classname,
+                'type' : str(self.type) }
+        return dic
 
         
 class IDLPrimitive(IDLTypeBase):
@@ -90,6 +235,8 @@ class IDLBasicType(IDLTypeBase):
     def __init__(self, name, parent):
         super(IDLBasicType, self).__init__('IDLBasicType', name, parent.root_node)
         self._verbose = True
+        #if self.name.find('['):
+        #    self._name = self.name[self.name.find('[')+1:]
         self._name = self.refine_typename(self.name)
         
     @property

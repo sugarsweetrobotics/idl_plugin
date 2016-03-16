@@ -21,6 +21,12 @@ class Plugin(PluginFunction):
         print 'yah'
 
 
+    def get_global_module(self):
+        return self._parser.global_module
+
+    def is_primitive(self, name):
+        return self._parser.is_primitive(name)
+
     def forEachIDL(self, func, idls=[], idl_dirs=[], except_files=[]):
         """ Apply func function to each IDLs.
         """
@@ -34,11 +40,14 @@ class Plugin(PluginFunction):
 
         except_files = except_files + default_except_files
         self._parser.forEachIDL(func, idl_dirs=idl_dirs + default_idl_dirs, except_files=except_files)
-
+        
     def parse(self, idls=[], idl_dirs=[], except_files=[]):
         self._parser = parser.IDLParser()
         self.forEachIDL(self._parser.parse_idl, idls=idls, idl_dirs=idl_dirs, except_files=except_files)
 
+    def get_idl_parser(self):
+        return self._parser
+        
     @manifest
     def list(self, argv):
         """ List IDL files in default directories (RTM_ROOT and ~/.wasanbon/idl)
@@ -98,6 +107,43 @@ class Plugin(PluginFunction):
 
         return 0
         
+    @manifest
+    def gen_constructor(self, argv):
+        """ Generate Constructor Code """
+        self.parser.add_option('-l', '--language', help='Language option (default=python)', default='python', action='store', dest='language')
+        options, argv = self.parse_args(argv[:], self._print_alternatives)
+        verbose = options.verbose_flag # This is default option
+        language = options.language
+        recursive = True
+
+        wasanbon.arg_check(argv, 4)
+        self.parse()
+
+        full_typename = argv[3]
+        codes = self.generate_constructor_python(full_typename, verbose=verbose)
+        for code in codes:
+            print code
+
+        return 0
+
+    def generate_constructor_python(self, full_typename, verbose=False):
+        codes = []
+        typs = self._parser.global_module.find_types(full_typename)
+        if len(typs) == 0:
+            sys.stdout.write('Not Found.\n')
+            return 0
+
+        for t in typs:
+            import yaml
+            if verbose: print yaml.dump(t.to_simple_dic(full_path=True, recursive=recursive), default_flow_style=False)
+            
+            code = self._parser.generate_constructor_python(t)
+            codes.append(code)
+
+        return codes
 
 
 
+        
+            
+        

@@ -19,13 +19,14 @@ class IDLTypedef(node.IDLNode):
             return 'typedef ' + name
 
         if recursive:
-            list_ = []
-            list_.append({'typedef' : str(self.type)})
+            n = 'typedef ' + str(self.type) +' ' + name
             if not self.type.is_primitive:
-                list_.append(self.type.obj.to_simple_dic(recursive=recursive, member_only=True))
+                dic = { n : (self.type.obj.to_simple_dic(recursive=recursive, member_only=True))}
+            else:
+                dic = { n : str(self.type) }
             if member_only:
-                return list_
-            return {name : list_}
+                return dic
+            return {name : dic}
 
         dic = 'typedef %s %s' % (self.type, name)
         return dic

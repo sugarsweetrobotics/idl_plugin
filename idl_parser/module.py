@@ -1,7 +1,7 @@
 import os, sys, traceback
 
 import node
-import struct, typedef, interface, enum
+import struct, typedef, interface, enum, const
 global_namespace = '__global__'
 sep = '::'
 
@@ -17,6 +17,7 @@ class IDLModule(node.IDLNode):
         self._typedefs = []
         self._structs = []
         self._enums = []
+        self._consts = []
         self._modules = []
 
     @property
@@ -37,7 +38,8 @@ class IDLModule(node.IDLNode):
                [i.to_simple_dic(quiet) for i in self.interfaces] +
                [m.to_simple_dic(quiet) for m in self.modules] + 
                [e.to_simple_dic(quiet) for e in self.enums] + 
-               [t.to_simple_dic(quiet) for t in self.typedefs]}
+               [t.to_simple_dic(quiet) for t in self.typedefs] + 
+               [t.to_simple_dic(quiet) for t in self.consts]}
         return dic
 
     def to_dic(self):
@@ -47,7 +49,8 @@ class IDLModule(node.IDLNode):
                 'typedefs' : [t.to_dic() for t in self.typedefs],
                 'structs' : [s.to_dic() for s in self.structs],
                 'enums' : [e.to_dic() for e in self.enums],
-                'modules' : [m.to_dic() for m in self.modules] }
+                'modules' : [m.to_dic() for m in self.modules],
+                'consts' : [c.to_dic() for c in self.consts] }
         return dic
     
 
@@ -120,6 +123,28 @@ class IDLModule(node.IDLNode):
                     self._enums.append(s)
 
                 pass
+
+            elif token == 'const':
+                values = []
+                while True:
+                    t = token_buf.pop()
+                    if t == ';':
+                        break
+                    values.append(t)
+
+                value_ = values[-1]
+                name_ = values[-3]
+                typename = ''
+                for t in values[:-3]:
+                    typename = typename + ' ' + t
+                typename = typename.strip()
+                s = const.IDLConst(name_, typename, value_, self)
+                s_ = self.const_by_name(name_)
+                if s_:
+                    if self._verbose: sys.stdout.write('# Error. Same Const Defined (%s)\n' % name_)
+                else:
+                    self._consts.append(s)
+                
             elif token == '}':
                 break
             
@@ -181,6 +206,20 @@ class IDLModule(node.IDLNode):
 
     def forEachEnum(self, func):
         for m in self.enums:
+            func(m)
+
+    @property
+    def consts(self):
+        return self._consts
+
+    def const_by_name(self, name):
+        for c in self.consts:
+            if c.name == name:
+                return c
+        return None
+
+    def forEachConst(self, func):
+        for m in self.consts:
             func(m)
 
     @property
